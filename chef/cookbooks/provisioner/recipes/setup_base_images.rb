@@ -206,18 +206,18 @@ if node[:platform] == "suse"
     action [ :enable ]
   end
 
-  template "/etc/xinetd.d/tftp" do
-    source "tftp.erb"
-    variables( :tftproot => tftproot )
-    notifies :reload, resources(:service => "xinetd")
-  end
-
   service "xinetd" do
     running true
     enabled true
     action [ :enable, :start ]
     supports :reload => true
     subscribes :reload, resources(:service => "tftp"), :immediately
+  end
+
+  template "/etc/xinetd.d/tftp" do
+    source "tftp.erb"
+    variables( :tftproot => tftproot )
+    notifies :reload, resources(:service => "xinetd")
   end
 else
   template "/etc/bluepill/tftpd.pill" do
