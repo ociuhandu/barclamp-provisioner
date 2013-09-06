@@ -382,6 +382,15 @@ node[:provisioner][:supported_oses].each do |os,params|
       source "set_hostname.ps1"
     end
 
+    # Copy the script required for setting the installed state
+    cookbook_file "/tftpboot/windows-6.2/extra/set_state.ps1" do
+      owner "root"
+      group "root"
+      mode "0644"
+      action :create
+      source "set_state.ps1"
+    end
+
     # Also copy the required files to install chef-client and communicate with Crowbar
     cookbook_file "/tftpboot/windows-6.2/extra/chef-client-11.4.4-2.windows.msi" do
       owner "root"
