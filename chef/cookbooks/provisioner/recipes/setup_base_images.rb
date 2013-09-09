@@ -393,8 +393,11 @@ node[:provisioner][:supported_oses].each do |os,params|
 
     # Copy the krobar key in a location accessible through samba share
     if ::File.exists?("/etc/crowbar.install.key") and not ::File.exist?("#{os_dir}/extra/crowbar.install.key")
-      ruby_block "Copy Chef config file if running in a Vagrant guest" do
-        ::FileUtils.cp "/etc/crowbar.install.key", "#{os_dir}/extra/crowbar.install.key"
+      ruby_block "Copy crowbar key for windows and hyper-v guests" do
+        block do
+          ::FileUtils.cp "/etc/crowbar.install.key", "#{os_dir}/extra/crowbar.install.key"
+        end
+        action :create
       end
     end
 
