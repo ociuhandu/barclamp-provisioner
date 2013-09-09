@@ -365,7 +365,7 @@ node[:provisioner][:supported_oses].each do |os,params|
   when /^(hyperv|windows)/ =~ os
 
     # Copy the crowbar_join script
-    cookbook_file "/tftpboot/windows-6.2/extra/crowbar_join.ps1" do
+    cookbook_file "#{os_dir}/extra/crowbar_join.ps1" do
       owner "root"
       group "root"
       mode "0644"
@@ -374,7 +374,7 @@ node[:provisioner][:supported_oses].each do |os,params|
     end
 
     # Copy the script required for setting the hostname
-    cookbook_file "/tftpboot/windows-6.2/extra/set_hostname.ps1" do
+    cookbook_file "#{os_dir}/extra/set_hostname.ps1" do
       owner "root"
       group "root"
       mode "0644"
@@ -383,7 +383,7 @@ node[:provisioner][:supported_oses].each do |os,params|
     end
 
     # Copy the script required for setting the installed state
-    cookbook_file "/tftpboot/windows-6.2/extra/set_state.ps1" do
+    cookbook_file "#{os_dir}/extra/set_state.ps1" do
       owner "root"
       group "root"
       mode "0644"
@@ -391,15 +391,22 @@ node[:provisioner][:supported_oses].each do |os,params|
       source "set_state.ps1"
     end
 
+    # Copy the krobar key in a location accessible through samba share
+    if ::File.exists?("/etc/crowbar.install.key") and not ::File.exist?("#{os_dir}/extra/crowbar.install.key")
+      ruby_block "Copy Chef config file if running in a Vagrant guest" do
+        ::FileUtils.cp "/etc/crowbar.install.key", "#{os_dir}/extra/crowbar.install.key"
+      end
+    end
+
     # Also copy the required files to install chef-client and communicate with Crowbar
-    cookbook_file "/tftpboot/windows-6.2/extra/chef-client-11.4.4-2.windows.msi" do
+    cookbook_file "#{os_dir}/extra/chef-client-11.4.4-2.windows.msi" do
       owner "root"
       group "root"
       mode "0644"
       action :create
       source "chef-client-11.4.4-2.windows.msi"
     end
-    cookbook_file "/tftpboot/windows-6.2/extra/curl.exe" do
+    cookbook_file "#{os_dir}/extra/curl.exe" do
       owner "root"
       group "root"
       mode "0644"
