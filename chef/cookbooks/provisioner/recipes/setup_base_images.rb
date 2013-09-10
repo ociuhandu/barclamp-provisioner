@@ -391,7 +391,7 @@ node[:provisioner][:supported_oses].each do |os,params|
       source "set_state.ps1"
     end
 
-    # Copy the krobar key in a location accessible through samba share
+    # Copy the crowbar key in a location accessible through samba share
     if ::File.exists?("/etc/crowbar.install.key") and not ::File.exist?("#{os_dir}/extra/crowbar.install.key")
       ruby_block "Copy crowbar key for windows and hyper-v guests" do
         block do
