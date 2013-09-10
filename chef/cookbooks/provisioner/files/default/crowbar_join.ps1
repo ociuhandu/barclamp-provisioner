@@ -36,11 +36,11 @@ function postState(){
     [string]$state
   )
   # $cmd = 'C:\Crowbar\curl.exe -o "c:\Crowbar\Logs\'+$name+'-'+$state+'.json" --connect-timeout 60 -S -L -X POST --data-binary "{ \`"name\`": \`"'+$name+'\`", \`"state\`": \`"'+$state+'\`" }" -H "Accept: application/json" -H "Content-Type: application/json" --max-time 240 -u "'+$key+'" --digest --anyauth "'+$uri+'/crowbar/crowbar/1.0/transition/default"'
-  $cmd = 'C:\Crowbar\curl.exe -o "c:\Crowbar\Logs\'+$name+'-'+$state+'.json" --connect-timeout 60 -S -L -X POST --data-binary "{ \"name\": \"'+$name+'\", \"state\": \"'+$state+'\" }" -H "Accept: application/json" -H "Content-Type: application/json" --max-time 240 -u "'+$key+'" --digest --anyauth "'+$uri+'/crowbar/crowbar/1.0/transition/default"'
+  $cmd = 'C:\Crowbar\curl.exe -o "'+$CrowbarLogsFolder+$name+'-'+$state+'.json" --connect-timeout 60 -S -L -X POST --data-binary "{ \"name\": \"'+$name+'\", \"state\": \"'+$state+'\" }" -H "Accept: application/json" -H "Content-Type: application/json" --max-time 240 -u "'+$key+'" --digest --anyauth "'+$uri+'/crowbar/crowbar/1.0/transition/default"'
   $ret=ExecCommand $cmd
   $exitcode=$ret[0]
-  Add-Content -Path "c:\Crowbar\Logs\$name-$state.json" -Value $ret[1]
-  Add-Content -Path "c:\Crowbar\Logs\$name-$state.log" -Value "$(Get-Date): $cmd returned with code $exitcode."
+  Add-Content -Path "$CrowbarLogsFolder\$name-$state.json" -Value $ret[1]
+  Add-Content -Path "$CrowbarLogsFolder\$name-$state.log" -Value "$(Get-Date): $cmd returned with code $exitcode."
 }
 
 function syncTime(){
@@ -58,38 +58,6 @@ function syncTime(){
   net start w32time 
   w32tm /config "/manualpeerlist:$address,0x8" /syncfromflags:MANUAL /reliable:yes /update
   w32tm /resync
-  <#
-  w32tm /register
-  $s = Get-Service w32time
-
-  if ($s.Status -eq [System.ServiceProcess.ServiceControllerStatus]::Running)
-  {
-    $s.Stop()
-  }
-  # net time /setsntp:$ntpServer
-  
-  $timeRoot = "HKLM:\SYSTEM\CurrentControlSet\services\W32Time"
-  $ntpServer = "$address,0x1"
-  Set-ItemProperty -path "$timeroot\parameters" -name type -Value "NTP"
-  Set-ItemProperty -path "$timeroot\parameters" -name NtpServer -Value $ntpServer
-  Set-ItemProperty -path "$timeroot\config" -name AnnounceFlags -Value 5
-  Set-ItemProperty -path "$timeroot\config" -name MaxPosPhaseCorrection -Value 1800
-  Set-ItemProperty -path "$timeroot\config" -name MaxNegPhaseCorrection -Value 1800
-  Set-ItemProperty -path "$timeroot\TimeProviders\NtpServer" -name Enabled -Value 1
-  Set-ItemProperty -path "$timeroot\TimeProviders\NtpClient" -name SpecialPollInterval -Value 900
-  $s.Start()
-  #>
-  <#
-  Register-WmiEvent -Query `
-    "select * from __InstanceModificationEvent within 5 where targetinstance isa 'win32_service'" `
-  -SourceIdentifier stopped
-  Stop-Service -Name w32Time
-  Wait-Event -SourceIdentifier stopped
-  Start-Service -Name w32Time
-  Unregister-Event -SourceIdentifier stopped
-  Remove-Event -SourceIdentifier stopped
-  #>
-  #w32tm /resync /rediscover
 }
 
 
@@ -112,7 +80,8 @@ $ChefCacheLocation="$ChefFolder/cache"
 $ChefBackupLocation="$ChefFolder/backup"
 $ChefExec="C:\opscode\chef\bin\chef-client.bat"
 
-if (!(Test-Path -path "c:\Crowbar\Logs")) {New-Item "c:\Crowbar\Logs" -Type Directory}
+if (!(Test-Path -path $CrowbarMain)) {New-Item $CrowbarMain -Type Directory}
+if (!(Test-Path -path $CrowbarLogsFolder)) {New-Item $CrowbarLogsFolder -Type Directory}
 if (!(Test-Path -path $ChefFolder)) {New-Item $ChefFolder -Type Directory}
 $hostname=hostname
 
@@ -233,6 +202,7 @@ if ($exitcode -ne "0")
 Add-Content -Path "$CrowbarLogFile" -Value "$(Get-Date): Setting crowbar state to $finalState"
 postState $CrowbarUri $CrowbarKey "$hostname" "$finalState"
 
+# If chef-client also registers as service, the part below is required:
 #if ($finalState -eq "ready")
 #{
   #Add-Content -Path "$CrowbarLogFile" -Value "$(Get-Date): Checking if the chef-client service is not running"
