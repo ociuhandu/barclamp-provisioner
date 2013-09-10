@@ -1,8 +1,5 @@
-Param(
-  [string]$CrowbarAdminIP,
-  [string]$CrowbarKey 
-)
-
+$CrowbarAdminIP = <%=@admin_ip%>
+$CrowbarKey = <%=@crowbar_key%>
 
 $cards = Get-WmiObject win32_networkadapter
 foreach ($card in $cards)
@@ -33,4 +30,3 @@ $started = $process.Start()
 $out = $process.StandardOutput.ReadToEnd()
 $err = $process.StandardError.ReadToEnd()
 $process.WaitForExit()
-

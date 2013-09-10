@@ -382,23 +382,18 @@ node[:provisioner][:supported_oses].each do |os,params|
       source "set_hostname.ps1"
     end
 
+    if ::File.exists?("/etc/crowbar.install.key")
+      crowbar_key = " crowbar.install.key=#{::File.read("/etc/crowbar.install.key").chomp.strip}"
+    end
+
     # Copy the script required for setting the installed state
-    cookbook_file "#{os_dir}/extra/set_state.ps1" do
+    template "#{os_dir}/extra/set_state.ps1" do
       owner "root"
       group "root"
       mode "0644"
-      action :create
-      source "set_state.ps1"
-    end
-
-    # Copy the crowbar key in a location accessible through samba share
-    if ::File.exists?("/etc/crowbar.install.key") and not ::File.exist?("#{os_dir}/extra/crowbar.install.key")
-      ruby_block "Copy crowbar key for windows and hyper-v guests" do
-        block do
-          ::FileUtils.cp "/etc/crowbar.install.key", "#{os_dir}/extra/crowbar.install.key"
-        end
-        action :create
-      end
+      source "set_state.ps1.erb"
+      variables(:crowbar_key => crowbar_key,
+                :admin_ip => admin_ip)
     end
 
     # Also copy the required files to install chef-client and communicate with Crowbar
