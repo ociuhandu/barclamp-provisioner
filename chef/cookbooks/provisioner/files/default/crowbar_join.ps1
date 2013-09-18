@@ -35,12 +35,17 @@ function postState(){
     [string]$name,
     [string]$state
   )
-  # $cmd = 'C:\Crowbar\curl.exe -o "c:\Crowbar\Logs\'+$name+'-'+$state+'.json" --connect-timeout 60 -S -L -X POST --data-binary "{ \`"name\`": \`"'+$name+'\`", \`"state\`": \`"'+$state+'\`" }" -H "Accept: application/json" -H "Content-Type: application/json" --max-time 240 -u "'+$key+'" --digest --anyauth "'+$uri+'/crowbar/crowbar/1.0/transition/default"'
-  $cmd = 'C:\Crowbar\curl.exe -o "'+$CrowbarLogsFolder+$name+'-'+$state+'.json" --connect-timeout 60 -S -L -X POST --data-binary "{ \"name\": \"'+$name+'\", \"state\": \"'+$state+'\" }" -H "Accept: application/json" -H "Content-Type: application/json" --max-time 240 -u "'+$key+'" --digest --anyauth "'+$uri+'/crowbar/crowbar/1.0/transition/default"'
-  $ret=ExecCommand $cmd
-  $exitcode=$ret[0]
-  Add-Content -Path "$CrowbarLogsFolder\$name-$state.json" -Value $ret[1]
-  Add-Content -Path "$CrowbarLogsFolder\$name-$state.log" -Value "$(Get-Date): $cmd returned with code $exitcode."
+  $user, $pass = $key.Split(':')
+  $passConv = ConvertTo-SecureString -String $pass -AsPlainText -Force
+  $credentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user,$passConv
+
+  Invoke-WebRequest -Uri "$uri/crowbar/crowbar/1.0/transition/default" -Credential $credentials -ContentType 'application/json' -Method Post -OutFile "c:\Crowbar\Logs\$name-$state.json" -Body "{`"name`": `"$name`", `"state`": `"$state`"}"
+
+  if($?){
+    Add-Content -Path "c:\Crowbar\Logs\$name-$state.log" -Value "$(Get-Date): $cmd returned with code $?."
+  }else{
+    Add-Content -Path "c:\Crowbar\Logs\$name-$state.log" -Value "$(Get-Date): $cmd returned with code $?. Error was: $error[0]"
+  }
 }
 
 function syncTime(){
@@ -128,7 +133,7 @@ if (-not (Test-Path -Path $ChefConfigFile))
   $domain = (Get-ItemProperty "HKLM:\SOFTWARE\Crowbar" -Name Domain).Domain
   Add-Content -Path "$CrowbarLogFile" -Value "$(Get-Date): Creating chef config file"
   Add-Content $ChefConfigFile "log_level :debug"
-  Add-Content $ChefConfigFile "node_name `""+$hostname+"."+$domain+"`""
+  Add-Content $ChefConfigFile "node_name `"$hostname.$domain`""
   Add-Content $ChefConfigFile ("log_location `""+$CrowbarLogsFolder.Replace("\","/")+"/chef_client.log`"").ToString()
   Add-Content $ChefConfigFile "chef_server_url $ChefServerURL"
   Add-Content $ChefConfigFile "validation_key `"$ChefServerCertificate`""
