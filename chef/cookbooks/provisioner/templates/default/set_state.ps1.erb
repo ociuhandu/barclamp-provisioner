@@ -1,5 +1,7 @@
-$CrowbarAdminIP = <%=@admin_ip%>
-$CrowbarKey = <%=@crowbar_key%>
+Param(
+  [string]$CrowbarAdminIP = "<%= @admin_ip %>",
+  [string]$CrowbarKey = "<%= @crowbar_key %>"
+)
 
 $cards = Get-WmiObject win32_networkadapter
 foreach ($card in $cards)
@@ -16,17 +18,13 @@ foreach ($card in $cards)
 $uri =  "http://"+$CrowbarAdminIP+":3000"
 $state = "installed"
 
-$args = '-o "c:\Crowbar\Logs\'+$hostname+'-'+$state+'.json" --connect-timeout 60 -S -L -X POST --data-binary "{ \"name\": \"'+$hostname+'\", \"state\": \"'+$state+'\" }" -H "Accept: application/json" -H "Content-Type: application/json" --max-time 240 -u "'+$CrowbarKey+'" --digest --anyauth "'+$uri+'/crowbar/crowbar/1.0/transition/default"'
+# Set state
+$user, $pass = $CrowbarKey.Split(':')
+$passConv = ConvertTo-SecureString -String $pass -AsPlainText -Force
+$credentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user,$passConv
 
-$process = New-Object System.Diagnostics.Process;
-$process.StartInfo.UseShellExecute = $false
-$process.StartInfo.RedirectStandardOutput = $true
-$process.StartInfo.RedirectStandardError = $true
-$process.StartInfo.CreateNoWindow = $true
-$process.StartInfo.FileName = 'C:\Crowbar\curl.exe'
-$process.StartInfo.Arguments = $args
-$started = $process.Start()
+Invoke-WebRequest -Uri $uri'/crowbar/crowbar/1.0/transition/default' -Credential $credentials -ContentType 'application/json' -Method Post -OutFile "X:\$hostname-$state.json" -Body "{""name"": ""$hostname"", ""state"": ""$state""}"
 
-$out = $process.StandardOutput.ReadToEnd()
-$err = $process.StandardError.ReadToEnd()
-$process.WaitForExit()
+# Leave some time for the chef recipe on the admin server to complete;
+# otherwise, there's a risk of re-PXE-booting in install mode
+Start-Sleep -s 300
